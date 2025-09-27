@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  homepage-dashboard:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config:ro
+    environment:
+      - NODE_ENV=production
