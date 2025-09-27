@@ -1,0 +1,80 @@
+name: Deploy Homepage Dashboard
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Create docker-compose.prod.yml
+      run: |
+        cat > docker-compose.prod.yml << EOF
+        version: '3.8'
+
+        services:
+          homepage-dashboard:
+            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ports:
+              - "3000:3000"
+            environment:
+              - NODE_ENV=production
+              - WEATHER_API_KEY=\${{ secrets.WEATHER_API_KEY }}
+              - LOCATION_LAT=\${{ secrets.LOCATION_LAT }}
+              - LOCATION_LON=\${{ secrets.LOCATION_LON }}
+              - LOCATION_CITY=\${{ secrets.LOCATION_CITY }}
+              - GOOGLE_MAPS_API_KEY=\${{ secrets.GOOGLE_MAPS_API_KEY }}
+              - GOOGLE_CALENDAR_CLIENT_ID=\${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}
+              - GOOGLE_CALENDAR_CLIENT_SECRET=\${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}
+              - GOOGLE_CALENDAR_ID=\${{ secrets.GOOGLE_CALENDAR_ID }}
+              - GOOGLE_CALENDAR_REDIRECT_URI=\${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
+              - PORT=3000
+            restart: unless-stopped
+            volumes:
+              - ./config:/app/config
+        EOF
+
+    - name: Upload docker-compose.prod.yml
+      uses: actions/upload-artifact@v3
+      with:
+        name: production-config
+        path: docker-compose.prod.yml
