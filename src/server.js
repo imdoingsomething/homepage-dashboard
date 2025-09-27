@@ -19,8 +19,10 @@ const calendarService = new CalendarService();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../public/views'));
 
-// Static files
+// Middleware
 app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Dashboard data cache
 let dashboardData = {
@@ -69,6 +71,38 @@ app.get('/api/data', (req, res) => {
 app.get('/api/refresh', async (req, res) => {
   await updateDashboardData();
   res.json({ success: true, data: dashboardData });
+});
+
+// Google Calendar OAuth routes
+app.get('/auth/google', (req, res) => {
+  const authUrl = calendarService.getAuthUrl();
+  res.redirect(authUrl);
+});
+
+app.get('/auth/callback', async (req, res) => {
+  const { code } = req.query;
+
+  if (!code) {
+    return res.status(400).send('Authorization code not provided');
+  }
+
+  const result = await calendarService.handleAuthCallback(code);
+
+  if (result.success) {
+    // Refresh dashboard data to get calendar events
+    await updateDashboardData();
+    res.redirect('/?auth=success');
+  } else {
+    res.status(500).send(`Authentication failed: ${result.error}`);
+  }
+});
+
+app.get('/auth/status', async (req, res) => {
+  const isAuthenticated = await calendarService.isAuthenticated();
+  res.json({
+    authenticated: isAuthenticated,
+    authUrl: isAuthenticated ? null : calendarService.getAuthUrl()
+  });
 });
 
 // Health check
