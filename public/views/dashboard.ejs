@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homepage Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .widget {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .widget h2 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        .error {
+            color: #ffcccb;
+            font-style: italic;
+        }
+        .success {
+            color: #90EE90;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            opacity: 0.7;
+        }
+        .auth-section {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Homepage Dashboard</h1>
+            <p>Current Time: <%= currentTime %></p>
+            <% if (data.lastUpdated) { %>
+                <p>Last Updated: <%= data.lastUpdated %></p>
+            <% } %>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Weather Widget -->
+            <div class="widget">
+                <h2>🌤️ Weather</h2>
+                <% if (data.weather && data.weather.current && data.weather.current.temp) { %>
+                    <p><strong>Temperature:</strong> <%= data.weather.current.temp %>°C</p>
+                    <% if (data.weather.current.feels_like) { %>
+                        <p><strong>Feels like:</strong> <%= data.weather.current.feels_like %>°C</p>
+                    <% } %>
+                    <% if (data.weather.current.weather && data.weather.current.weather[0] && data.weather.current.weather[0].description) { %>
+                        <p><strong>Condition:</strong> <%= data.weather.current.weather[0].description %></p>
+                    <% } %>
+                    <% if (data.weather.current.humidity) { %>
+                        <p><strong>Humidity:</strong> <%= data.weather.current.humidity %>%</p>
+                    <% } %>
+                <% } else { %>
+                    <p class="error">Weather data unavailable</p>
+                    <p><em>Check WEATHER_API_KEY configuration</em></p>
+                <% } %>
+            </div>
+
+            <!-- Traffic Widget -->
+            <div class="widget">
+                <h2>🚗 Traffic</h2>
+                <% if (data.traffic && data.traffic.routes && Array.isArray(data.traffic.routes) && data.traffic.routes.length > 0) { %>
+                    <% data.traffic.routes.forEach(route => { %>
+                        <div style="margin-bottom: 15px;">
+                            <% if (route.destination) { %>
+                                <p><strong>To <%= route.destination %>:</strong></p>
+                            <% } %>
+                            <% if (route.duration) { %>
+                                <p>Duration: <%= route.duration %></p>
+                            <% } %>
+                            <% if (route.distance) { %>
+                                <p>Distance: <%= route.distance %></p>
+                            <% } %>
+                            <% if (route.traffic_info) { %>
+                                <p>Traffic: <%= route.traffic_info %></p>
+                            <% } %>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p class="error">Traffic data unavailable</p>
+                    <p><em>Check GOOGLE_MAPS_API_KEY configuration</em></p>
+                <% } %>
+            </div>
+
+            <!-- Calendar Widget -->
+            <div class="widget">
+                <h2>📅 Calendar</h2>
+                <% if (data.calendar && data.calendar.events && Array.isArray(data.calendar.events)) { %>
+                    <% if (data.calendar.events.length > 0) { %>
+                        <% data.calendar.events.slice(0, 5).forEach(event => { %>
+                            <% if (event && event.summary) { %>
+                                <div style="margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                                    <p><strong><%= event.summary %></strong></p>
+                                    <% if (event.start && event.start.dateTime) { %>
+                                        <p><%= new Date(event.start.dateTime).toLocaleString() %></p>
+                                    <% } else if (event.start && event.start.date) { %>
+                                        <p>All day - <%= new Date(event.start.date).toLocaleDateString() %></p>
+                                    <% } %>
+                                </div>
+                            <% } %>
+                        <% }); %>
+                    <% } else { %>
+                        <p class="success">No events today</p>
+                    <% } %>
+                <% } else { %>
+                    <p class="error">Calendar data unavailable</p>
+                    <div class="auth-section">
+                        <p><em>Authentication required for Google Calendar</em></p>
+                        <a href="/auth/google" class="btn">Authenticate with Google</a>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🔄 Auto-refresh every 10 minutes | <a href="/api/refresh" style="color: #90EE90;">Manual Refresh</a></p>
+            <p>📡 <a href="/api/data" style="color: #90EE90;">View Raw Data</a> | 💚 <a href="/health" style="color: #90EE90;">Health Check</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh page every 10 minutes
+        setTimeout(() => {
+            window.location.reload();
+        }, 600000);
+
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Homepage Dashboard loaded successfully');
+
+            // Check authentication status
+            fetch('/auth/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.authenticated) {
+                        console.log('Calendar authentication required');
+                    }
+                })
+                .catch(error => console.log('Auth status check failed:', error));
+        });
+    </script>
+</body>
+</html>
